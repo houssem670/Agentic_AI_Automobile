@@ -1,50 +1,751 @@
-from langchain_ollama import ChatOllama
+import json # transformer-based LLMs return text, so we need to parse it as JSON to get structured data.
+import os # used to access environment variables, such as GEMINI_API_KEY, which is required for authenticating with the Gemini API.
+
+from dotenv import load_dotenv # load_dotenv is used to load environment variables from a .env file, allowing the application to access sensitive information like API keys without hardcoding them into the source code.
+from google import genai # import the Google GenAI client library, which provides tools for interacting with Google's generative AI models, such as Gemini. This library is used to send prompts and receive responses from the LLM.
+from google.genai import types # Ce sont les bibliothèques permettant à ton programme de communiquer avec Gemini.
+from langchain_ollama import ChatOllama # import the ChatOllama class from the langchain_ollama library, which provides an interface for interacting with the Ollama LLM. This is used as a fallback option if Gemini is unavailable.
+
+from models.security_assessment import SecurityAssessment # import the SecurityAssessment dataclass from the models.security_assessment module to represent the structured security assessment produced by the Security Agent.
 
 
-llm = ChatOllama(   
+# ==============================================================
+# Environment configuration
+# ==============================================================
+
+load_dotenv() # Load environment variables from a .env file, allowing the application to access sensitive information like API keys without hardcoding them into the source code. This is important for securely managing credentials and configuration settings in different environments (e.g., development, testing, production).
+
+
+# ==============================================================
+# Gemini configuration
+# ==============================================================
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") # Retrieve the Gemini API key from the environment variables. This key is required for authenticating with the Gemini API, allowing the application to send prompts and receive responses from the Gemini LLM. If the key is not set, the application will fall back to using Ollama for LLM processing.
+
+GEMINI_MODEL = os.getenv(
+    "GEMINI_MODEL",
+    "gemini-2.5-flash"
+) # Si GEMINI_MODEL existe dans .env, utilise cette valeur. Sinon utilise gemini-2.5-flash
+
+
+gemini_client = None # Au départ, aucun client Gemini n'est configuré.
+
+if GEMINI_API_KEY:
+    gemini_client = genai.Client(
+        api_key=GEMINI_API_KEY
+    ) # If the GEMINI_API_KEY is set in the environment variables, initialize a Gemini client using the provided API key. This client will be used to send prompts and receive responses from the Gemini LLM. If the API key is not set, the application will not configure the Gemini client and will rely on Ollama as a fallback option for LLM processing.
+
+
+# ==============================================================
+# Ollama fallback configuration
+# ==============================================================
+
+ollama_llm = ChatOllama( # Prépare Ollama avec mon modèle local llama3.2:3b
     model="llama3.2:3b",
-    temperature=0
+    temperature=0 # signifie qu'on veut une réponse plus déterministe et moins créative.
 )
 
 
-def security_agent(event): 
+# ==============================================================
+# Security Agent
+# ==============================================================
+
+def security_agent(event) -> SecurityAssessment:
+    """
+    Analyze a SecurityEvent and produce a structured
+    SecurityAssessment.
+
+    LLM architecture:
+
+        SecurityEvent
+              |
+              v
+        Gemini (primary)
+              |
+        if unavailable/error
+              |
+              v
+        Ollama (fallback)
+              |
+              v
+        SecurityAssessment
+
+
+    Important architecture rule:
+
+        SecurityEvent
+            = deterministic / observed facts
+
+        SecurityAssessment
+            = security interpretation produced by the agent
+    """
+
+    # ----------------------------------------------------------
+    # Prepare evidence
+    # ----------------------------------------------------------
+
+    evidence_text = "\n".join(
+        f"- {item}"
+        for item in event.evidence
+    )
+
+    metadata_text = "\n".join(
+        f"- {key}: {value}"
+        for key, value in event.metadata.items()
+    )  # transformer les listes/dictionnaires du SecurityEvent en texte lisible pour le prompt envoyé à Gemini/Ollama.
+
+    # ----------------------------------------------------------
+    # Security Agent prompt
+    # ----------------------------------------------------------
 
     prompt = f"""
-You are an automotive cybersecurity analyst.
+You are a professional automotive cybersecurity analyst.
 
-Analyze ONLY the CAN security event provided below.
+Your task is to analyze ONE SecurityEvent generated by a
+deterministic CAN anomaly detection engine.
 
-IMPORTANT RULES:
-- Do not invent measurements.
-- Do not invent CAN specifications.
-- Do not assume a CAN ID is legitimate or malicious without evidence.
-- Do not confuse the observation window with CAN frame duration.
-- Use the exact values provided in the event.
-- If information is missing, explicitly say "Unknown".
-- The threshold is the anomaly detection threshold in messages per second.
+Your response will be consumed by another software component.
 
-CAN SECURITY EVENT:
+Therefore, you MUST return ONLY valid JSON.
 
-CAN ID: {event["can_id"]}                                                                     
-Message count: {event["message_count"]}     
-Observation window: {event["window_seconds"]} seconds
-Observed rate: {event["observed_rate"]} messages/second
-Detection threshold: {event["threshold"]} messages/second
-Anomaly detected: {event["anomaly"]}
-Attack type: {event["attack_type"]}
+Do not use Markdown.
+Do not use code fences.
+Do not add explanations outside the JSON object.
 
-Provide the analysis using exactly these sections:
 
-1. Event Analysis
-2. Detected Threat
-3. Risk Level
-4. Evidence
-5. Recommended Investigation
-6. Recommended Mitigation
+============================================================
+IMPORTANT ARCHITECTURE PRINCIPLE
+============================================================
 
-Base every conclusion on the provided evidence.
+The SecurityEvent contains OBSERVED FACTS.
+
+You are responsible for producing a SECURITY ASSESSMENT.
+
+Do not modify, contradict, or invent the observed measurements.
+
+
+============================================================
+GROUNDING POLICY
+============================================================
+
+You MUST follow these rules:
+
+1. Use ONLY information contained in the SecurityEvent.
+
+2. Never invent:
+
+   - CAN measurements
+   - CAN payloads
+   - ECU information
+   - attacker identity
+   - attack source
+   - vehicle impact
+   - vulnerabilities
+   - root cause
+   - malicious intent
+   - protocol behavior
+   - timing behavior
+   - additional numerical values
+
+3. The attack type supplied by the deterministic detection engine
+   MUST be preserved exactly.
+
+4. Do NOT change the attack type.
+
+5. Do NOT claim that an attacker exists unless the provided evidence
+   explicitly proves this.
+
+6. Do NOT claim that an ECU is compromised unless the provided
+   evidence proves this.
+
+7. Do NOT claim actual vehicle impact unless the provided evidence
+   proves this.
+
+8. Clearly distinguish:
+
+   - observed facts
+   - security interpretation
+   - unknown information
+
+9. If information is unavailable, explicitly mark it as Unknown.
+
+10. Do not present hypotheses as facts.
+
+11. Never create numerical measurements that are not present
+    in the SecurityEvent.
+
+12. Investigation recommendations must be directly relevant to
+    the detected anomaly.
+
+13. Mitigation recommendations must be directly relevant to
+    the detected anomaly.
+
+14. Do not recommend unrelated security mechanisms.
+
+15. Use professional and concise automotive cybersecurity language.
+
+
+============================================================
+RISK ASSESSMENT POLICY
+============================================================
+
+Select exactly ONE risk level:
+
+LOW
+MEDIUM
+HIGH
+CRITICAL
+UNKNOWN
+
+The risk level MUST be conservative.
+
+The risk level must be justified using ONLY the available evidence.
+
+If the available evidence is insufficient to establish a meaningful
+security impact, prefer MEDIUM or UNKNOWN rather than inventing
+a high-impact scenario.
+
+Do not assume vehicle safety impact.
+
+Do not assume ECU compromise.
+
+Do not assume malicious intent.
+
+
+============================================================
+SECURITY EVENT
+============================================================
+
+Event ID:
+{event.event_id}
+
+Timestamp:
+{event.timestamp}
+
+Event Type:
+{event.event_type}
+
+CAN ID:
+{event.can_id}
+
+Channel:
+{event.channel}
+
+Message Count:
+{event.message_count}
+
+Observation Window:
+{event.window_seconds} seconds
+
+Observed Rate:
+{event.observed_rate} messages/second
+
+Detection Rule:
+{event.detection_rule}
+
+Detection Threshold:
+{event.threshold} messages/second
+
+Anomaly Detected:
+{event.anomaly}
+
+Attack Type:
+{event.attack_type}
+
+Evidence:
+{evidence_text}
+
+Metadata:
+{metadata_text}
+
+
+============================================================
+INVESTIGATION GUIDELINES
+============================================================
+
+The investigation recommendations MUST be specific to the
+detected anomaly.
+
+For CAN frequency anomalies such as CAN_FLOODING, prioritize:
+
+1. Analyze the temporal distribution of the detected CAN ID.
+
+2. Verify whether the observed transmission rate is legitimate
+   for this CAN ID.
+
+3. Identify the transmitting ECU or source if this information
+   is available from the CAN environment.
+
+4. Inspect the payloads associated with the detected CAN ID
+   if payload information is available.
+
+5. Monitor whether the abnormal transmission rate persists.
+
+6. Correlate the event with other CAN anomalies.
+
+Do NOT recommend unrelated actions such as generic firmware
+vulnerability scanning unless the SecurityEvent provides
+evidence that makes such an action relevant.
+
+
+============================================================
+MITIGATION GUIDELINES
+============================================================
+
+For CAN frequency anomalies such as CAN_FLOODING, prioritize:
+
+1. Continue monitoring the affected CAN ID.
+
+2. Validate the legitimate transmission rate of the CAN ID.
+
+3. Apply appropriate traffic filtering or CAN IDS controls
+   if the abnormal behavior is confirmed.
+
+4. Investigate and isolate the source of excessive traffic
+   when source information is available.
+
+Do not claim that a mitigation has already been deployed.
+
+Recommendations are recommendations only.
+
+
+============================================================
+REQUIRED JSON FORMAT
+============================================================
+
+Return exactly this JSON structure:
+
+{{
+    "threat_type": "string or null",
+
+    "risk_level": "LOW | MEDIUM | HIGH | CRITICAL | UNKNOWN",
+
+    "summary": "short professional security summary",
+
+    "observed_facts": [
+        "fact supported directly by the SecurityEvent"
+    ],
+
+    "security_interpretation": "evidence-based interpretation",
+
+    "unknowns": [
+        "information that cannot be established"
+    ],
+
+    "investigation_steps": [
+        "relevant investigation step"
+    ],
+
+    "mitigation_actions": [
+        "relevant defensive action"
+    ],
+
+    "confidence": 0.0
+}}
+
+
+============================================================
+FIELD REQUIREMENTS
+============================================================
+
+threat_type:
+
+Use the attack_type supplied by the deterministic detection engine.
+
+The value MUST remain:
+
+{event.attack_type}
+
+Do not invent another threat type.
+
+Do not change the classification.
+
+
+------------------------------------------------------------
+
+risk_level:
+
+Choose exactly one allowed value:
+
+LOW
+MEDIUM
+HIGH
+CRITICAL
+UNKNOWN
+
+Use conservative reasoning.
+
+Do not assume safety impact.
+
+
+------------------------------------------------------------
+
+summary:
+
+Write a short professional summary of the detected event.
+
+The summary must be based only on the observed evidence.
+
+Do not claim that a real attacker has been confirmed.
+
+
+------------------------------------------------------------
+
+observed_facts:
+
+Include ONLY facts directly supported by the SecurityEvent.
+
+Do not add assumptions.
+
+Do not invent values.
+
+
+------------------------------------------------------------
+
+security_interpretation:
+
+Explain what the observed evidence indicates.
+
+Use cautious language such as:
+
+"consistent with"
+"indicates anomalous behavior"
+"may indicate"
+
+Do NOT say:
+
+"the attacker did..."
+"the attacker compromised..."
+"the ECU is compromised..."
+
+unless explicitly proven by the event.
+
+
+------------------------------------------------------------
+
+unknowns:
+
+Explicitly identify information that cannot be established.
+
+Relevant examples include:
+
+- attacker identity
+- attack source
+- affected ECU
+- actual vehicle impact
+- root cause
+- malicious intent
+
+Only include unknown information that is relevant.
+
+
+------------------------------------------------------------
+
+investigation_steps:
+
+Give practical technical investigation actions
+directly related to the detected anomaly.
+
+Do not invent data.
+
+Do not claim that the investigation has already been performed.
+
+
+------------------------------------------------------------
+
+mitigation_actions:
+
+Give defensive actions directly related to the detected anomaly.
+
+Do not claim that these actions have already been implemented.
+
+
+------------------------------------------------------------
+
+confidence:
+
+Return a number between:
+
+0.0 and 1.0
+
+This represents confidence in the SECURITY ASSESSMENT.
+
+It does NOT represent confidence that an attacker exists.
+
+
+============================================================
+FINAL REQUIREMENT
+============================================================
+
+Return ONLY valid JSON.
+
+No Markdown.
+
+No commentary.
+
+No explanation before or after the JSON.
 """
 
-    response = llm.invoke(prompt)
+    # ==========================================================
+    # LLM CALL
+    # ==========================================================
 
-    return response.content     
+    raw_content = None
+
+    # ----------------------------------------------------------
+    # Primary LLM: Gemini
+    # ----------------------------------------------------------
+
+    if gemini_client is not None:
+
+        try:
+
+            response = gemini_client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0,
+                    response_mime_type="application/json"
+                )
+            )
+
+            raw_content = response.text.strip()
+
+            print(
+                "[Security Agent] "
+                "Analysis performed using Gemini."
+            )
+
+        except Exception as exc:
+
+            print(
+                "[Security Agent] "
+                f"Gemini unavailable ({type(exc).__name__}). "
+                "Falling back to Ollama."
+            )
+
+    else:
+
+        print(
+            "[Security Agent] "
+            "GEMINI_API_KEY not configured. "
+            "Using Ollama fallback."
+        )
+
+    # ----------------------------------------------------------
+    # Fallback LLM: Ollama
+    # ----------------------------------------------------------
+
+    if raw_content is None:
+
+        try:
+
+            response = ollama_llm.invoke(prompt)
+
+            raw_content = response.content.strip()
+
+            print(
+                "[Security Agent] "
+                "Analysis performed using Ollama fallback."
+            )
+
+        except Exception as exc:
+
+            raise RuntimeError(
+                "Both Gemini and Ollama failed.\n"
+                f"Ollama error: {type(exc).__name__}: {exc}"
+            ) from exc
+
+    # ==========================================================
+    # Parse JSON
+    # ==========================================================
+
+    try:
+
+        data = json.loads(raw_content)
+
+    except json.JSONDecodeError as exc:
+
+        raise ValueError(
+            "Security Agent returned invalid JSON.\n\n"
+            f"Raw response:\n{raw_content}"
+        ) from exc
+
+    # ==========================================================
+    # Validate and normalize fields
+    # ==========================================================
+
+    # ----------------------------------------------------------
+    # Threat type
+    # ----------------------------------------------------------
+    #
+    # IMPORTANT:
+    # The deterministic detector is authoritative.
+    # The LLM cannot change the attack classification.
+    #
+
+    threat_type = event.attack_type
+
+    # ----------------------------------------------------------
+    # Risk level
+    # ----------------------------------------------------------
+
+    risk_level = data.get(
+        "risk_level",
+        "UNKNOWN"
+    )
+
+    allowed_risk_levels = {
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL",
+        "UNKNOWN"
+    }
+
+    if risk_level not in allowed_risk_levels:
+
+        risk_level = "UNKNOWN"
+
+    # ----------------------------------------------------------
+    # Summary
+    # ----------------------------------------------------------
+
+    summary = data.get(
+        "summary",
+        ""
+    )
+
+    # ----------------------------------------------------------
+    # Observed facts
+    # ----------------------------------------------------------
+
+    observed_facts = data.get(
+        "observed_facts",
+        []
+    )
+
+    if not isinstance(observed_facts, list):
+
+        observed_facts = [
+            str(observed_facts)
+        ]
+
+    # ----------------------------------------------------------
+    # Security interpretation
+    # ----------------------------------------------------------
+
+    security_interpretation = data.get(
+        "security_interpretation",
+        ""
+    )
+
+    # ----------------------------------------------------------
+    # Unknowns
+    # ----------------------------------------------------------
+
+    unknowns = data.get(
+        "unknowns",
+        []
+    )
+
+    if not isinstance(unknowns, list):
+
+        unknowns = [
+            str(unknowns)
+        ]
+
+    # ----------------------------------------------------------
+    # Investigation steps
+    # ----------------------------------------------------------
+
+    investigation_steps = data.get(
+        "investigation_steps",
+        []
+    )
+
+    if not isinstance(investigation_steps, list):
+
+        investigation_steps = [
+            str(investigation_steps)
+        ]
+
+    # ----------------------------------------------------------
+    # Mitigation actions
+    # ----------------------------------------------------------
+
+    mitigation_actions = data.get(
+        "mitigation_actions",
+        []
+    )
+
+    if not isinstance(mitigation_actions, list):
+
+        mitigation_actions = [
+            str(mitigation_actions)
+        ]
+
+    # ----------------------------------------------------------
+    # Confidence
+    # ----------------------------------------------------------
+
+    confidence = data.get(
+        "confidence",
+        None
+    )
+
+    if confidence is not None:
+
+        try:
+
+            confidence = float(confidence)
+
+        except (TypeError, ValueError):
+
+            confidence = None
+
+        if confidence is not None:
+
+            confidence = max(
+                0.0,
+                min(1.0, confidence)
+            )
+
+    # ==========================================================
+    # Return structured SecurityAssessment
+    # ==========================================================
+
+    return SecurityAssessment(
+
+        threat_type=threat_type,
+
+        risk_level=risk_level,
+
+        summary=str(summary),
+
+        observed_facts=[
+            str(item)
+            for item in observed_facts
+        ],
+
+        security_interpretation=str(
+            security_interpretation
+        ),
+
+        unknowns=[
+            str(item)
+            for item in unknowns
+        ],
+
+        investigation_steps=[
+            str(item)
+            for item in investigation_steps
+        ],
+
+        mitigation_actions=[
+            str(item)
+            for item in mitigation_actions
+        ],
+
+        confidence=confidence
+    )

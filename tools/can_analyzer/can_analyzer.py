@@ -1,17 +1,17 @@
-import time # import the time module to measure elapsed time
-from collections import Counter # import Counter from collections to count occurrences of CAN IDs
+import time # mesurer les 5 secondes d'observation.
+from collections import Counter # compter les messages par CAN ID
 
-import can # import the python-can library for CAN bus interaction
+import can # bibliothèque python-can, qui permet de communiquer avec vcan0.n
 
-from tools.anomaly_detector.anomaly_detector import detect_frequency_anomaly # import the detect_frequency_anomaly function from the anomaly_detector module
+from tools.anomaly_detector.anomaly_detector import detect_frequency_anomaly # notre détecteur qui décidera si le débit est anormal
 
 
-def analyze_can_traffic(window_seconds=5,  threshold=100):  # Au-dessus de 100 messages/seconde, on considère le trafic comme anormal.
+def analyze_can_traffic(window_seconds=5,  threshold=100):  # coute le CAN pendant 5 secondes et considère qu'un débit supérieur à 100 messages/s est anormal
 
     bus = can.interface.Bus(
         channel="vcan0",
         interface="socketcan"
-    ) # Connecte-toi à l'interface CAN vcan0 en utilisant SocketCAN
+    ) # Connecte-toi à l'interface vcan0 en utilisant SocketCAN, l'interface CAN native de Linux
 
     print(f"Listening on vcan0 for {window_seconds} seconds...")
 
