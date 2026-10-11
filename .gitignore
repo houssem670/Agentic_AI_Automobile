@@ -1,18 +1,26 @@
-# Python virtual environments
-.venv/
-.venv-wsl/
-
-# Environment variables / secrets
+# Environment variables and secrets
 .env
+.env.*
+!.env.example
 
-# Python cache
+# Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+.venv/
+.venv-*/
+.pytest_cache/
+
+# Coverage
+.coverage
+htmlcov/
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 
 # Logs
-*.log                                        
+*.log
+
+# Generated reports
+reports/*
+!reports/.gitkeep

@@ -1,0 +1,48 @@
+Title: Automotive Cybersecurity and Functional Safety Standards
+Domain: Automotive Engineering
+Purpose: Provide context for security and safety investigations
+
+1. ISO/SAE 21434
+ISO/SAE 21434 addresses cybersecurity engineering for road vehicles.
+It covers cybersecurity activities across the vehicle lifecycle, including
+risk assessment, development, production, operation and maintenance.
+It provides an engineering framework rather than a universal CAN attack
+detection algorithm.
+
+2. ISO 26262
+ISO 26262 addresses functional safety for road vehicles. It concerns
+hazards caused by malfunctioning behavior of electrical and electronic
+systems. Functional safety and cybersecurity are related but distinct
+disciplines.
+
+3. Cybersecurity Risk
+Cybersecurity risk assessment considers potential threats, vulnerabilities,
+attack paths, impacts and suitable mitigations. Conclusions should be based
+on the system context and documented evidence.
+
+4. Functional Safety
+Functional safety activities analyze hazards and risks arising from
+malfunctions. A suspicious network message alone is not enough to determine
+a safety classification or confirm a hazardous vehicle behavior.
+
+5. Relationship Between Safety and Security
+A cyberattack may cause or contribute to unsafe behavior, but not every
+cybersecurity event creates a safety hazard. Security and safety teams may
+need to coordinate their investigations.
+
+6. Evidence and Compliance
+A prototype detector or an AI-generated report does not establish compliance
+with an automotive standard. Compliance requires appropriate engineering
+processes, evidence, reviews and validation.
+
+7. Applying These Concepts to a CAN IDS
+- Record the observed event and its technical evidence.
+- Separate cybersecurity indicators from confirmed impacts.
+- Document assumptions, uncertainties and possible consequences.
+- Recommend further analysis and validation where necessary.
+- Avoid claiming certification or standards compliance without evidence.
+
+Source note:
+Educational summary only. Consult the applicable official editions of
+ISO/SAE 21434 and ISO 26262 for authoritative requirements. This document
+does not reproduce the standards or establish compliance.

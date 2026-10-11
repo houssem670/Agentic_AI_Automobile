@@ -1,0 +1,52 @@
+Title: Intrusion Detection for Automotive CAN Networks
+Domain: Automotive Cybersecurity
+Purpose: Support analysis of suspicious CAN traffic
+
+1. Intrusion Detection System
+An Intrusion Detection System (IDS) monitors network activity to identify
+patterns that may indicate malicious or abnormal behavior. A CAN IDS can
+inspect message identifiers, payloads, frequencies and timing.
+
+2. Rule-Based Detection
+Rule-based detection compares observations with predefined conditions.
+Examples include a message rate exceeding a configured threshold or an
+unexpected sequence of messages. Thresholds must be adapted to the
+vehicle network and operating conditions.
+
+3. Frequency-Based Detection
+A detector can count messages per identifier over a defined time window.
+An unusual increase may indicate flooding, but legitimate operating
+conditions can also change traffic rates.
+
+4. Replay Detection
+Repeated payloads or recurring message sequences may be replay indicators.
+However, periodic CAN messages are normal in many automotive systems.
+Detection should consider timing, sequence context and baseline traffic.
+
+5. Payload-Based Detection
+Payload analysis can identify unexpected values or changes in message
+content. Reliable interpretation may require a valid DBC or other
+authoritative signal definition. Unknown payloads should not be assigned
+invented meanings.
+
+6. False Positives and False Negatives
+A false positive occurs when normal traffic is classified as suspicious.
+A false negative occurs when malicious activity is not detected.
+Evaluation should use labeled scenarios and representative normal traffic.
+
+7. Evidence and Confidence
+An IDS should record timestamps, identifiers, observed rates, thresholds,
+relevant payload information and the detection rule. Risk assessments
+should distinguish observed facts from hypotheses and confirmed attacks.
+
+8. Recommended Investigation
+- Compare the event with a normal traffic baseline.
+- Check the time window and configured detection threshold.
+- Examine related identifiers and message sequences.
+- Correlate multiple indicators before escalating the risk.
+- Record uncertainty and preserve evidence.
+
+Source note:
+General educational summary, not a validated detection specification.
+Detection rules and thresholds require testing against representative
+traffic before operational use.

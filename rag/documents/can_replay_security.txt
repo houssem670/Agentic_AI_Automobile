@@ -1,0 +1,21 @@
+Sujet: Cybersécurité automobile - attaques par replay CAN
+
+Le bus CAN permet aux calculateurs électroniques d'échanger des messages.
+Une attaque par replay consiste à enregistrer des trames CAN puis à les
+retransmettre pour tenter de reproduire une commande ou un état antérieur.
+
+Indices possibles:
+- répétition inhabituelle de trames identiques;
+- fréquence de transmission anormale;
+- séquences de messages qui se répètent de façon suspecte.
+
+Limites:
+Une répétition ne prouve pas à elle seule une attaque. Certaines trames
+automobiles sont périodiques par conception. Il faut examiner les identifiants,
+les horodatages, les données et le contexte avant de conclure.
+
+Mesures défensives possibles:
+- surveiller la fréquence et les séquences des messages;
+- comparer le trafic à une référence normale;
+- corréler plusieurs indices avant de classer un événement;
+- conserver les preuves et documenter les incertitudes.

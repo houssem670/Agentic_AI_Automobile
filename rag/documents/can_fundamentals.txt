@@ -1,0 +1,45 @@
+Title: Automotive CAN Bus Fundamentals
+Domain: Automotive Networking
+Purpose: Knowledge for CAN traffic analysis and cybersecurity investigation
+
+1. Overview
+The Controller Area Network (CAN) is a communication bus used by
+electronic control units (ECUs) in vehicles. ECUs exchange messages
+without requiring a central host for every communication.
+
+2. CAN Frames
+A CAN frame contains an arbitration identifier and a data field,
+along with control and error-checking information. Classical CAN
+supports up to 8 data bytes per frame. CAN FD supports larger payloads,
+up to 64 data bytes.
+
+3. CAN Identifiers
+CAN identifiers participate in bus arbitration and help identify
+messages. A lower numerical identifier generally has higher arbitration
+priority. An identifier alone does not prove which ECU sent a message.
+
+4. Periodic Traffic
+Automotive ECUs often transmit messages periodically. Repeated messages
+are therefore not automatically evidence of an attack. Analysis should
+consider timing, identifier, payload, frequency and the expected context.
+
+5. Traffic Monitoring
+Useful observations include message counts, timestamps, inter-arrival
+times, identifier distributions and payload changes. A baseline of
+normal traffic helps identify unusual behavior.
+
+6. Cybersecurity Limitations
+An unexpected frequency or repeated payload is an indicator for
+investigation, not definitive proof of malicious activity. Results
+should record observed evidence, alternative explanations and unknowns.
+
+7. Defensive Investigation
+- Compare observed traffic with a known normal baseline.
+- Inspect timestamps and payload sequences.
+- Correlate multiple indicators before assigning a risk level.
+- Preserve logs and document the limits of the analysis.
+
+Source note:
+General technical summary. Verify protocol details against authoritative
+CAN documentation and relevant automotive specifications before using
+them for safety-critical decisions.

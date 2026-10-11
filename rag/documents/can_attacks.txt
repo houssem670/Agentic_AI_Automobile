@@ -1,0 +1,38 @@
+Title: Automotive CAN Attacks
+Domain: Automotive Cybersecurity
+Purpose: Support investigation of suspicious CAN traffic
+
+1. Replay Attack
+A replay attack involves recording legitimate messages and retransmitting
+them later. Potential indicators include repeated payload sequences,
+unexpected timing or messages appearing outside their normal context.
+Repeated frames alone do not prove a replay attack.
+
+2. Flooding Attack
+A flooding attack generates an unusually high volume of messages and may
+increase bus load or delay other communications. Detection can consider
+message rates, identifier distribution and changes from a normal baseline.
+High traffic may also result from legitimate operating conditions.
+
+3. Spoofing Attack
+Spoofing involves transmitting messages that imitate expected identifiers
+or message content. An identifier by itself does not authenticate the
+sender. Investigation may require timing analysis, payload validation
+and additional trusted context.
+
+4. Detection Principles
+- Compare traffic with a known normal baseline.
+- Examine identifiers, payloads, timestamps and message rates.
+- Correlate independent indicators before assigning a risk level.
+- Preserve raw observations and explain uncertainty.
+- Distinguish a suspicious indicator from a confirmed attack.
+
+5. Investigation Limitations
+CAN traffic observations may not reveal the physical source of a message.
+A detector can produce false positives, especially when normal traffic
+patterns vary. Conclusions should reflect the available evidence.
+
+Source note:
+General educational summary, not a formal attack-detection specification.
+Validate technical conclusions against authoritative automotive
+cybersecurity references before safety-critical use.

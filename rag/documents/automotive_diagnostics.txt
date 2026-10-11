@@ -1,0 +1,51 @@
+Title: Automotive Diagnostics - OBD-II and UDS
+Domain: Automotive Diagnostics
+Purpose: Support evidence-based diagnostic investigations
+
+1. Diagnostic Overview
+Automotive diagnostics help identify faults, retrieve diagnostic information
+and guide troubleshooting of electronic control units (ECUs). Diagnostic
+results must be interpreted in the context of the vehicle and its systems.
+
+2. OBD-II
+On-Board Diagnostics II (OBD-II) provides standardized diagnostic services
+for emissions-related systems in supported vehicles. Diagnostic Trouble
+Codes (DTCs) identify categories of detected faults. A DTC alone does not
+always establish the underlying root cause.
+
+3. Diagnostic Trouble Codes
+A DTC should be interpreted using reliable documentation for the relevant
+vehicle or system. Do not invent a meaning for an unknown code. Record the
+code, its source, the conditions observed and any related evidence.
+
+4. UDS
+Unified Diagnostic Services (UDS), standardized in ISO 14229, defines
+diagnostic services used to communicate with electronic control units.
+Available services and access conditions depend on the ECU implementation.
+
+5. Diagnostic Evidence
+Useful evidence may include DTCs, timestamps, ECU responses, operating
+conditions, communication errors and related CAN traffic. A network anomaly
+does not by itself prove that an ECU has a physical or software fault.
+
+6. Hypotheses and Root Cause
+A probable cause is a hypothesis supported by available evidence.
+A confirmed root cause requires sufficient verification. Diagnostic reports
+should clearly separate observations, hypotheses and unknown information.
+
+7. Recommended Investigation
+- Preserve relevant logs and diagnostic responses.
+- Consult documentation for the specific vehicle and ECU.
+- Check whether the fault is reproducible under known conditions.
+- Correlate DTCs with timestamps and related observations.
+- Recommend safe, authorized checks before drawing conclusions.
+
+8. Security and Safety
+Diagnostic services can have security and safety implications. Testing
+should use authorized systems and controlled environments. Do not send
+diagnostic commands to a real vehicle without appropriate authorization
+and validated procedures.
+
+Source note:
+General educational summary. Consult the applicable ISO 14229 edition,
+official OBD documentation and vehicle-specific service information.

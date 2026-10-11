@@ -1,56 +1,77 @@
-import time # mesurer les 5 secondes d'observation.
-from collections import Counter # compter les messages par CAN ID
 
-import can # bibliothèque python-can, qui permet de communiquer avec vcan0.n
+import time
+from collections import Counter
 
-from tools.anomaly_detector.anomaly_detector import detect_frequency_anomaly # notre détecteur qui décidera si le débit est anormal
+import can
+
+from tools.anomaly_detector.anomaly_detector import detect_frequency_anomaly
+from tools.anomaly_detector.replay_detector import detect_replay_attack
 
 
-def analyze_can_traffic(window_seconds=5,  threshold=100):  # coute le CAN pendant 5 secondes et considère qu'un débit supérieur à 100 messages/s est anormal
-
+def analyze_can_traffic(window_seconds=5, threshold=100):
     bus = can.interface.Bus(
         channel="vcan0",
         interface="socketcan"
-    ) # Connecte-toi à l'interface vcan0 en utilisant SocketCAN, l'interface CAN native de Linux
+    )
 
     print(f"Listening on vcan0 for {window_seconds} seconds...")
 
-    messages = []  # Initialize an empty list to store received CAN messages
-
-    start_time = time.time() # Record the start time to measure the elapsed time during the listening period
+    messages = []
+    start_time = time.time()
 
     try:
-        while time.time() - start_time < window_seconds: # Continue à écouter tant que le temps écoulé est inférieur à 5 secondes
-            message = bus.recv(timeout=1) # Wait for a CAN message with a timeout of 1 second. If no message is received within this time, it will return None.
+        while time.time() - start_time < window_seconds:
+            message = bus.recv(timeout=1)
 
-            if message is not None: # If a message is received, append it to the messages list for later analysis.
+            if message is not None:
                 messages.append(message)
 
     finally:
-        bus.shutdown() # Ferme proprement la connexion avec vcan0
+        bus.shutdown()
 
     counts = Counter(
         hex(message.arbitration_id)
         for message in messages
-    ) # Count the occurrences of each CAN ID in the received messages and store them in a Counter object. The CAN IDs are converted to hexadecimal format for better readability.
+    )
 
-    detections = [] # Initialize an empty list to store the results of the anomaly detection for each CAN ID.
+    detections = []
 
+    # 1. Détection des anomalies de fréquence
     print("\n=== CAN TRAFFIC ===")
 
     for can_id, count in counts.items():
-
         print(f"{can_id} -> {count} messages")
 
-        detection = detect_frequency_anomaly( # Call the detect_frequency_anomaly function to analyze the frequency of messages for each CAN ID. It checks if the observed rate exceeds the specified threshold and returns a dictionary with the analysis results.
+        detection = detect_frequency_anomaly(
             can_id=can_id,
             count=count,
             window_seconds=window_seconds,
             threshold=threshold
         )
 
-        print("Detection:", detection) # Print the detection results for each CAN ID, including the observed rate, whether an anomaly was detected, and the attack type if applicable.
+        print("Frequency detection:", detection)
+        detections.append(detection)
 
-        detections.append(detection) # Append the detection results to the detections list for later use in the security analysis.
+    # 2. Détection des répétitions suspectes (Replay Detector)
+    print("\n=== REPLAY DETECTION ===")
 
-    return detections # Return the list of detections, which contains the analysis results for each CAN ID, including whether an anomaly was detected and the associated attack type if applicable.
+    replay_event = detect_replay_attack(
+        messages=messages,
+        channel="vcan0"
+    )
+
+    if replay_event is not None:
+        print("Replay suspicion detected!")
+        print(f"CAN ID: {replay_event.can_id}")
+        print(f"Attack type: {replay_event.attack_type}")
+        print(f"Repeated frames: {replay_event.message_count}")
+
+        for evidence in replay_event.evidence:
+            print(f"  - {evidence}")
+
+        detections.append(replay_event)
+
+    else:
+        print("No suspicious consecutive frame repetition detected.")
+
+    return detections

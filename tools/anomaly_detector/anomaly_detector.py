@@ -10,8 +10,14 @@ def detect_frequency_anomaly(
     threshold: float = 100.0 # le seuil de détection d'anomalie en messages par seconde (msg/s). Si le débit observé dépasse ce seuil, on considère qu'il y a une anomalie.
 ) -> SecurityEvent: # si le débit observé dépasse le seuil, on considère qu'il y a une anomalie. La fonction retourne un objet SecurityEvent qui contient les détails de l'anomalie détectée, y compris le CAN ID, le nombre de messages, le débit observé, le seuil, et d'autres informations pertinentes.
 
+    if count < 0:
+        raise ValueError("count must be non-negative")
+
     if window_seconds <= 0:
         raise ValueError("window_seconds must be greater than 0")
+
+    if threshold <= 0:
+       raise ValueError("threshold must be greater than 0")
 
     # ----------------------------------------------------------
     # Calculate observed traffic rate
