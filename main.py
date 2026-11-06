@@ -14,8 +14,7 @@ def main():
     print("=" * 45)
     print(" AUTOMOTIVE CAN SECURITY PLATFORM ")
     print("=" * 45)
-
-    # 1. Capture CAN traffic and run deterministic detectors
+    
     detections = analyze_can_traffic(
         window_seconds=5,
         threshold=100,
@@ -25,7 +24,6 @@ def main():
 
     reports = []
 
-    # 2. Analyze every detected anomaly
     for detection in detections:
         if not detection.anomaly:
             continue
@@ -34,8 +32,7 @@ def main():
         print(f"Anomaly detected: {detection.attack_type}")
         print(f"CAN ID: {detection.can_id}")
         print(f"Detection rule: {detection.detection_rule}")
-
-        # 3. Security Agent
+        
         try:
             assessment = security_agent(detection)
         except Exception as exc:
@@ -51,8 +48,7 @@ def main():
         print(f"Threat type: {assessment.threat_type}")
         print(f"Risk level: {assessment.risk_level}")
         print(f"Summary: {assessment.summary}")
-
-        # 4. Diagnostic Agent
+        
         try:
             diagnostic = diagnostic_agent(detection)
 
@@ -77,7 +73,6 @@ def main():
                 analysis_method="ERROR",
             )
 
-        # 5. Report Agent
         try:
             report = generate_security_report(
                 event=detection,
@@ -93,7 +88,6 @@ def main():
                 f"{type(exc).__name__}: {exc}"
             )
 
-    # 6. Save all generated reports into one Markdown file
     if reports:
         combined_report = "\n\n---\n\n".join(reports)
 
