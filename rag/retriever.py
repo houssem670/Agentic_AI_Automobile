@@ -5,9 +5,8 @@ from collections import Counter
 
 DOCUMENTS_DIR = Path(__file__).parent / "documents"
 
-# Mots courants sans grande valeur pour la recherche.
 STOP_WORDS = {
-    # Français
+  
     "le", "la", "les", "un", "une", "des", "du", "de", "d",
     "dans", "en", "et", "ou", "à", "au", "aux", "pour",
     "par", "avec", "sur", "comment", "quel", "quelle",
@@ -15,7 +14,7 @@ STOP_WORDS = {
     "qui", "que", "quoi", "son", "sa", "ses", "se", "pas",
     "plus", "comme", "il", "elle", "leur", "leurs",
 
-    # Anglais
+
     "the", "a", "an", "of", "and", "or", "in", "on",
     "for", "to", "is", "are", "how", "what", "which",
     "does", "do", "with", "from", "by", "that", "this",
@@ -28,7 +27,6 @@ def tokenize(text: str) -> list[str]:
     words = re.findall(r"\b[a-zA-ZÀ-ÿ0-9_]+\b", text.lower())
     return [word for word in words if word not in STOP_WORDS]
 
-# Équivalences français-anglais adaptées à la recherche automobile.
 QUERY_EXPANSIONS = {
     "bus can": "can bus controller area network",
     "attaque replay": "replay attack recorded messages retransmission",
@@ -45,12 +43,12 @@ QUERY_EXPANSIONS = {
     "fréquence": "frequency message rate",
     "trames": "frames messages",
     "identifiants": "identifiers",
-        # Usurpation d'identité et spoofing CAN
+       
     "usurpation d'identifiant can":
         "spoofing attack forged identifier ECU impersonation",
     "usurpation": "spoofing attack forged identity impersonation",
 
-    # Fréquence anormale et trafic légitime
+    
     "hausse de fréquence can":
         "increased message rate frequency flooding legitimate traffic normal baseline",
     "ne prouve-t-elle pas une attaque":
@@ -81,7 +79,6 @@ def is_boilerplate(section: str) -> bool:
     if not lines:
         return True
 
-    # Ignore les notes de source.
     if lines[0].startswith("source note:"):
         return True
 
@@ -93,7 +90,6 @@ def is_boilerplate(section: str) -> bool:
         "sujet:",
     )
 
-    # Ignore un passage composé uniquement de métadonnées.
     if all(line.startswith(metadata_prefixes) for line in lines):
         return True
 
@@ -152,7 +148,6 @@ def retrieve(query: str, top_k: int = 3) -> list[dict]:
     document_count = len(chunks)
     document_frequency = Counter()
 
-    # Nombre de passages contenant chaque terme.
     for chunk in chunks:
         document_frequency.update(set(chunk["terms"]))
 
