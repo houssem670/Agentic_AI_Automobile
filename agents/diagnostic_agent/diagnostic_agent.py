@@ -11,11 +11,6 @@ from models.security_event import SecurityEvent
 from models.diagnostic_report import DiagnosticReport
 from rag.rag_pipeline import build_rag_context
 
-
-# ==========================================================
-# 1. Configuration
-# ==========================================================
-
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -35,11 +30,6 @@ ollama_llm = ChatOllama(
     temperature=0,
 )
 
-
-# ==========================================================
-# 2. Diagnostic Agent
-# ==========================================================
-
 def diagnostic_agent(
     event: SecurityEvent,
 ) -> DiagnosticReport:
@@ -49,10 +39,6 @@ def diagnostic_agent(
     The agent proposes diagnostic hypotheses and checks.
     It does not claim a root cause without sufficient evidence.
     """
-
-    # ------------------------------------------------------
-    # A. Prepare structured event data
-    # ------------------------------------------------------
 
     event_data = {
         "event_id": event.event_id,
@@ -93,10 +79,6 @@ def diagnostic_agent(
         "[Diagnostic Agent] "
         f"RAG retrieved {len(rag_result['results'])} passage(s)."
     )
-
-    # ------------------------------------------------------
-    # B. Build the diagnostic prompt
-    # ------------------------------------------------------
 
     prompt = f"""
 You are an automotive CAN diagnostic analyst.
@@ -154,10 +136,6 @@ The confidence must be a number between 0.0 and 1.0.
 Return JSON only, without Markdown fences.
 """
 
-    # ------------------------------------------------------
-    # C. Ask Gemini first
-    # ------------------------------------------------------
-
     raw_content = None
     analysis_method = ""
 
@@ -188,10 +166,6 @@ Return JSON only, without Markdown fences.
                 "Trying Ollama."
             )
 
-    # ------------------------------------------------------
-    # D. Ollama fallback
-    # ------------------------------------------------------
-
     if raw_content is None:
         try:
             response = ollama_llm.invoke(prompt)
@@ -208,10 +182,6 @@ Return JSON only, without Markdown fences.
                 "Both Gemini and Ollama failed. "
                 f"Ollama error: {type(exc).__name__}: {exc}"
             ) from exc
-
-    # ------------------------------------------------------
-    # E. Parse and validate JSON
-    # ------------------------------------------------------
 
     try:
         data = json.loads(raw_content)
@@ -241,8 +211,7 @@ Return JSON only, without Markdown fences.
     summary = data.get("diagnostic_summary", "")
     if not isinstance(summary, str):
         summary = ""
-
-    # Confidence must be numeric and finite.
+        
     confidence = data.get("confidence", 0.0)
 
     try:
@@ -252,10 +221,6 @@ Return JSON only, without Markdown fences.
 
     if not 0.0 <= confidence <= 1.0:
         confidence = 0.0
-
-    # ------------------------------------------------------
-    # F. Build the structured diagnostic report
-    # ------------------------------------------------------
 
     return DiagnosticReport(
         event_id=event.event_id,
