@@ -11,17 +11,7 @@ from models.security_assessment import SecurityAssessment
 
 from rag.rag_pipeline import build_rag_context
 
-
-# ==============================================================
-# Environment configuration
-# ==============================================================
-
 load_dotenv()
-
-
-# ==============================================================
-# Gemini configuration
-# ==============================================================
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
@@ -31,20 +21,10 @@ gemini_client = None
 if GEMINI_API_KEY:
     gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
-
-# ==============================================================
-# Ollama fallback configuration
-# ==============================================================
-
 ollama_llm = ChatOllama(
     model="llama3.2:3b",
     temperature=0,
 )
-
-
-# ==============================================================
-# Security Agent
-# ==============================================================
 
 def security_agent(event) -> SecurityAssessment:
     """
@@ -58,10 +38,6 @@ def security_agent(event) -> SecurityAssessment:
         Security interpretation and recommendations from the LLM.
     """
 
-    # ----------------------------------------------------------
-    # Prepare evidence and metadata
-    # ----------------------------------------------------------
-
     evidence_text = "\n".join(
         f"- {item}" for item in event.evidence
     )
@@ -70,10 +46,6 @@ def security_agent(event) -> SecurityAssessment:
         f"- {key}: {value}"
         for key, value in event.metadata.items()
     )
-
-    # ----------------------------------------------------------
-    # Prepare detector-specific event description
-    # ----------------------------------------------------------
 
     if event.detection_rule == "CONSECUTIVE_FRAME_REPETITION":
 
@@ -124,10 +96,6 @@ Metadata:
 {metadata_text}
 """
 
-    # ----------------------------------------------------------
-    # Retrieve automotive cybersecurity knowledge (RAG)
-    # ----------------------------------------------------------
-
     rag_query = (
         f"Automotive CAN cybersecurity investigation. "
         f"Attack type: {event.attack_type}. "
@@ -143,11 +111,6 @@ Metadata:
         "[Security Agent] "
         f"RAG retrieved {len(rag_result['results'])} passage(s)."
     )
-
-
-    # ----------------------------------------------------------
-    # Security Agent prompt
-    # ----------------------------------------------------------
 
     prompt = f"""
 You are a professional automotive cybersecurity analyst.
@@ -318,10 +281,6 @@ FIELD REQUIREMENTS:
 Return ONLY valid JSON.
 """
 
-    # ==========================================================
-    # Primary LLM: Gemini, with Ollama fallback
-    # ==========================================================
-
     data = None
     errors = []
 
@@ -380,15 +339,8 @@ Return ONLY valid JSON.
             "Both Gemini and Ollama failed to provide valid JSON. "
             + " | ".join(errors)
         )
-
-    # ==========================================================
-    # Normalize fields
-    # ==============================================================
-
-    # The deterministic detector is authoritative.
     threat_type = event.attack_type
 
-    # Risk level
     allowed_risk_levels = {
         "LOW",
         "MEDIUM",
@@ -401,14 +353,11 @@ Return ONLY valid JSON.
 
     if risk_level not in allowed_risk_levels:
         risk_level = "UNKNOWN"
-
-    # Text fields
+        
     summary = data.get("summary", "")
     security_interpretation = data.get(
         "security_interpretation", ""
     )
-
-    # List fields
     def normalize_list(value):
         if isinstance(value, list):
             return [str(item) for item in value]
@@ -433,8 +382,6 @@ Return ONLY valid JSON.
     mitigation_actions = normalize_list(
         data.get("mitigation_actions", [])
     )
-
-    # Confidence
     confidence = data.get("confidence")
 
     if confidence is not None:
@@ -446,10 +393,6 @@ Return ONLY valid JSON.
         if confidence is not None:
             if not 0.0 <= confidence <= 1.0:
                 confidence = max(0.0, min(1.0, confidence))
-
-    # ==========================================================
-    # Return structured assessment
-    # ==============================================================
 
     return SecurityAssessment(
         threat_type=threat_type,
