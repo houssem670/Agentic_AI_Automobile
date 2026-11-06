@@ -8,40 +8,40 @@ from models.security_event import SecurityEvent
 
 
 def detect_replay_attack(
-    messages: Sequence[can.Message], # List of CAN messages to analyze
-    min_repetitions: int = 5, # Minimum number of identical consecutive frames to consider it a replay attack
-    max_burst_seconds: float = 0.1, # Maximum duration of a burst of identical frames
+    messages: Sequence[can.Message], 
+    min_repetitions: int = 5, 
+    max_burst_seconds: float = 0.1, 
     channel: str = "vcan0",
-) -> Optional[SecurityEvent]: # Returns a SecurityEvent if a replay attack is suspected, otherwise None
+) -> Optional[SecurityEvent]: 
 
     if min_repetitions < 2:
-        raise ValueError("min_repetitions must be at least 2") # minimum of 2 repetitions required to consider it a replay attack
+        raise ValueError("min_repetitions must be at least 2") 
 
     if max_burst_seconds <= 0:
-        raise ValueError("max_burst_seconds must be positive") # maximum burst duration must be positive
+        raise ValueError("max_burst_seconds must be positive") 
 
-    best_run = [] # Crée une liste vide qui conservera la plus longue série de trames identiques trouvée jusqu'ici
-    current_run = [] # Crée une deuxième liste vide. Elle contient la série de trames identiques que Python est en train d'analyser
-    previous_signature = None # previous_signature doit mémoriser la signature de la trame précédente.
+    best_run = [] 
+    current_run = [] 
+    previous_signature = None 
 
-    for message in messages: # Pour chaque message dans la liste messages, exécute les instructions suivantes
+    for message in messages: 
         signature = (
             message.arbitration_id,
             bytes(message.data),
             message.is_extended_id,
-        )  # La signature est une sorte de carte d'identité de la trame, construite avec trois informations.
+        )  
 
         if signature != previous_signature:
             current_run = [message]
         else:
             current_run.append(message)
-# Si les trois éléments sont identiques à ceux de la trame précédente, la trame est ajoutée à current_run. Sinon, une nouvelle série commenc
-        previous_signature = signature  # Après la comparaison, Python mémorise la signature du message actuel.
+            
+        previous_signature = signature  
 
         duration = (
             current_run[-1].timestamp - current_run[0].timestamp
-        ) # Durée = heure de la dernière trame − heure de la première trame
-
+        )
+        
         if duration < 0 or duration > max_burst_seconds:
             current_run = [message]
 
@@ -51,12 +51,11 @@ def detect_replay_attack(
     if len(best_run) < min_repetitions:
         return None
 
-    duration = best_run[-1].timestamp - best_run[0].timestamp # Le code recalcule la durée de la meilleure série sauvegardée.
+    duration = best_run[-1].timestamp - best_run[0].timestamp 
 
     if duration > max_burst_seconds:
-        return None # Si cette série dépasse le temps maximal autorisé, aucune suspicion n'est retournée.
-
-    can_id = hex(best_run[0].arbitration_id) # hex() convertit l'identifiant CAN en notation hexadécimale. Par exemple, 291 devient 0x123.
+        return None 
+    can_id = hex(best_run[0].arbitration_id) 
 
     evidence = [
         f"CAN ID: {can_id}",
