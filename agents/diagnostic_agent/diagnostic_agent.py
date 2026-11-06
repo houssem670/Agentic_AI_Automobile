@@ -237,7 +237,6 @@ Return JSON only, without Markdown fences.
         recommended_checks=normalize_list(
             data.get("recommended_checks")
         ),
-        # A single anomaly event cannot confirm root cause.
         root_cause_confirmed=False,
         confidence=confidence,
         analysis_method=analysis_method,
