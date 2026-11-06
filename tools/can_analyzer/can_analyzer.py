@@ -36,7 +36,6 @@ def analyze_can_traffic(window_seconds=5, threshold=100):
 
     detections = []
 
-    # 1. Détection des anomalies de fréquence
     print("\n=== CAN TRAFFIC ===")
 
     for can_id, count in counts.items():
@@ -52,7 +51,6 @@ def analyze_can_traffic(window_seconds=5, threshold=100):
         print("Frequency detection:", detection)
         detections.append(detection)
 
-    # 2. Détection des répétitions suspectes (Replay Detector)
     print("\n=== REPLAY DETECTION ===")
 
     replay_event = detect_replay_attack(
