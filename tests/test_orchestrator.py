@@ -153,6 +153,5 @@ class TestOrchestrator(unittest.TestCase):
     def test_workflow_state_initializes_empty_errors(self):
         from agents.orchestrator.orchestrator import build_workflow
 
-        # Verify that the compiled workflow can be constructed.
         workflow = build_workflow()
         self.assertIsNotNone(workflow)
